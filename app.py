@@ -42,7 +42,7 @@ def getInventoryDBConnection():
 #   except Exception, e:
 #     print str(e)
 
-def insertInventory(price, name, qty, pic=None, description=None):
+def createInventory(price, name, qty, pic=None, description=None):
   try:
     db.Inventory.insert_one(
       {
@@ -62,12 +62,16 @@ def printInventory():
   for document in cursor: 
     print(document)
 
-def deleteInventory(name):
+def retrieveInventory(name):
   try:
-    db.Inventory.remove({"name": name})
+    items = db.Inventory.find({"name": name})
+    for item in items:
+      print(item)
+    
+    return items
     
   except Exception, e:
-    print str(e)
+    print str(e)  
 
 def updateInventory(price, name, qty, pic=None, description=None):
   try:
@@ -88,6 +92,13 @@ def updateInventory(price, name, qty, pic=None, description=None):
   except Exception, e:
     print str(e)
   
+def deleteInventory(name):
+  try:
+    db.Inventory.remove({"name": name})
+    
+  except Exception, e:
+    print str(e)
+
 @app.route('/login',methods=['GET'])
 def login():
   if validCredentials():
@@ -99,17 +110,25 @@ def login():
 if __name__ == "__main__":
   
   db = getInventoryDBConnection()
-  insertInventory(20,"Apple",1)
-  insertInventory(22,"Orange",2)
-  insertInventory(24,"Banana",1)
+  db.Inventory.remove({})
+  createInventory(20,"Apple",1)
+  createInventory(22,"Orange",2)
+  createInventory(24,"Banana",1)
   printInventory()
+
+  
   updateInventory(25,"Banana",4)
+  print("updated Banana")
   printInventory()
+
   deleteInventory("Apple")
+  print("deleted Apple")
   printInventory()
-  deleteInventory("Banana")
-  printInventory()
+
+  createInventory(28,"Strawberry",5)
   deleteInventory("Orange")
-  print("deleted stuff")
-  printInventory()
+  print("deleted Orange, will now retrieve Strawberry")
+  retrieveInventory("Strawberry")
+  
+  #printInventory()
   #app.run(port=8000,debug=True)
