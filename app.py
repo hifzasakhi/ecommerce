@@ -1,11 +1,13 @@
 from flask import Flask, request, render_template
 from jinja2 import Template, Environment, PackageLoader, select_autoescape
 import io
+import bcrypt
 import urllib2, urllib, random, string  
 import pymongo
 from pymongo import MongoClient
 from pprint import pprint
 import json
+from validate_email import validate_email
       
 app = Flask(__name__)
 inventory = None
@@ -18,11 +20,21 @@ def renderTemplate(type):
   elif type == "Error":
     return render_template("error.html")
 
-def validCredentials():
-  
-  return True
+def validateCredentials(email,password):
+  print("validateCredentials")
+  #validates email by checking the DNS and if it has SMTP server
+  is_valid = validate_email(email,verify=True)
+  print "was it valid? ", is_valid
+  if is_valid:
+    if userExists(email, password):
+      print "user exists"
+      return True
+    else:
+      return False
+  else:
+    return False
 
-def getInventoryDBConnection():
+def getDBConnection():
   try:
 
     client = MongoClient('localhost', 27017)
@@ -32,15 +44,77 @@ def getInventoryDBConnection():
   except Exception, e:
     print str(e)
 
-# def getUsersDBConnection():
-#   try:
+def printUsers():
+  collection = db.Users
+  cursor = collection.find({})
+  for document in cursor: 
+    print(document)
 
-#     client = MongoClient('localhost', 27017)
-#     db = client.Users
-#     return db
+def createUser(email, hashed_pwd):
+  print("in create user")
+  try:
+    db.Users.insert_one(
+      {
+        "email": email,
+        "password": hashed_pwd
+      })
 
-#   except Exception, e:
-#     print str(e)
+  except Exception, e:
+    print str(e)
+
+def userExists(email):
+  try:
+    items = db.Users.find({"email": email})
+    if len(items) > 0:
+      return True
+    else:
+      return False
+  
+  except Exception, e:
+    print str(e)  
+
+def retrieveUser(email):
+  try:
+    items = db.Users.find({"email": email})
+    for item in items:
+      print(item)
+    
+    return items
+    
+  except Exception, e:
+    print str(e)  
+
+def updateUser(email, hashed_pwd):
+  try:
+    db.Users.update(
+      {"email": email},
+      { 
+        "$set":
+          {
+            "password": hashed_pwd
+          }
+      }
+    )
+    
+  except Exception, e:
+    print str(e)
+  
+def deleteUser(email):
+  try:
+    db.Users.remove({"email": email})
+    
+  except Exception, e:
+    print str(e)
+
+def hash_password(password):
+    hash_password = bcrypt.hashpw(password, bcrypt.gensalt())
+    return hash_password
+
+def getCredentials():
+  email = raw_input("Please enter your email: ")
+  password = raw_input("Please enter your password: ")
+  return (email, password)
+
 
 def createInventory(price, name, qty, pic=None, description=None):
   try:
@@ -97,11 +171,12 @@ def deleteInventory(name):
     db.Inventory.remove({"name": name})
     
   except Exception, e:
-    print str(e)
+    print str(e)  
 
 @app.route('/login',methods=['GET'])
 def login():
-  if validCredentials():
+  getCredentials()
+  if validCredentials(email,password):
     return renderTemplate("Login")
   else:
     return renderTemplate("Error")     
@@ -109,26 +184,13 @@ def login():
 
 if __name__ == "__main__":
   
-  db = getInventoryDBConnection()
-  db.Inventory.remove({})
-  createInventory(20,"Apple",1)
-  createInventory(22,"Orange",2)
-  createInventory(24,"Banana",1)
-  printInventory()
+  db = getDBConnection()
+  email, password = getCredentials()
+  hashed_pwd = hash_password(password)
+  createUser(email, hashed_pwd)
+  validateCredentials(email, hashed_pwd)
+  printUsers()
 
-  
-  updateInventory(25,"Banana",4)
-  print("updated Banana")
-  printInventory()
 
-  deleteInventory("Apple")
-  print("deleted Apple")
-  printInventory()
 
-  createInventory(28,"Strawberry",5)
-  deleteInventory("Orange")
-  print("deleted Orange, will now retrieve Strawberry")
-  retrieveInventory("Strawberry")
-  
-  #printInventory()
-  #app.run(port=8000,debug=True)
+  app.run(port=8000,debug=True)
