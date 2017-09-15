@@ -12,6 +12,8 @@ from validate_email import validate_email
 app = Flask(__name__)
 inventory = None
 db = None
+shoppingCart = {}
+
 
 def renderTemplate(type):
   if type == "Login":
@@ -22,10 +24,10 @@ def renderTemplate(type):
 
 def validateCredentials(email,password):
   print("validateCredentials")
-  #validates email by checking the DNS and if it has SMTP server
+  #validates email by checking the DNS and if it has SMTP server using library functions
   is_valid = validate_email(email,verify=True)
   print "was it valid? ", is_valid
-  if is_valid:
+  if is_valid:o
     if userExists(email, password):
       print "user exists"
       return True
@@ -172,6 +174,27 @@ def deleteInventory(name):
     
   except Exception, e:
     print str(e)  
+
+def addToCart(price, name, qty, pic=None, description=None): 
+  shoppingCart.append(
+      {
+        "price": price,
+        "name": name,
+        "quantity": qty,
+        "pic": pic,
+        "description": description
+      })
+
+def removeFromCart(price, name, qty, pic=None, description=None): 
+  for item in shoppingCart:
+    if item["name"] == "name":
+      shoppingCart.pop(item, None)
+
+def updateItemQuantityInCar(name, qty): 
+  for item in shoppingCart:
+    if item["name"] == name:
+      shoppingCart.update(item["quantity"] = qty)
+  
 
 @app.route('/login',methods=['GET'])
 def login():
